@@ -1,0 +1,121 @@
+// Step 2: Define study region (example: Karachi)
+var region = ee.Geometry.Point([67.0011, 24.8607]).buffer(50000);
+
+// Center map on region
+Map.centerObject(region, 8);
+
+// Display region on map
+Map.addLayer(region, {color: 'red'}, 'Study Region');
+
+// Step 3: NDVI (Vegetation Health)
+
+// Load MODIS NDVI data (2023)
+var ndvi = ee.ImageCollection('MODIS/006/MOD13Q1')
+  .filterDate('2023-01-01', '2023-12-31')
+  .select('NDVI')
+  .mean()
+  .clip(region);
+
+// NDVI visualization
+var ndviVis = {
+  min: 0,
+  max: 9000,
+  palette: ['brown', 'yellow', 'green']
+};
+
+// Add NDVI layer to map
+Map.addLayer(ndvi, ndviVis, 'NDVI (Vegetation Health)');
+
+// Step 4: Temperature (Heat Stress) - FIXED VERSION
+
+var temperature = ee.ImageCollection('MODIS/061/MOD11A2')
+  .filterDate('2023-01-01', '2023-12-31')
+  .select('LST_Day_1km')
+  .mean()
+  .multiply(0.02)      // scale factor
+  .subtract(273.15)    // Kelvin to Celsius
+  .clip(region);
+
+// Visualization
+var tempVis = {
+  min: 20,
+  max: 45,
+  palette: ['blue', 'yellow', 'orange', 'red']
+};
+
+// Add layer
+Map.addLayer(temperature, tempVis, 'Temperature (Heat Stress)');
+
+// Step 5: Simple Environmental Risk Map
+
+// Normalize NDVI (higher NDVI = lower risk)
+var ndviNorm = ndvi
+  .unitScale(0, 9000)
+  .rename('NDVI_norm');
+
+// Normalize Temperature (higher temperature = higher risk)
+var tempNorm = temperature
+  .unitScale(20, 45)
+  .rename('Temp_norm');
+
+// Environmental Risk Index
+// Higher value = higher environmental risk
+var envRisk = tempNorm.subtract(ndviNorm)
+  .rename('Environmental_Risk');
+
+// Visualization
+var riskVis = {
+  min: -1,
+  max: 1,
+  palette: ['green', 'yellow', 'red']
+};
+
+// Add risk layer
+Map.addLayer(envRisk, riskVis, 'Environmental Risk (ESG)');
+
+Export.image.toDrive({
+  image: envRisk,
+  description: 'Environmental_Risk_ESG',
+  folder: 'GEE_ESG_Project',
+  scale: 1000,
+  region: region,
+  maxPixels: 1e13
+});
+
+// Export NDVI Map
+Export.image.toDrive({
+  image: ndvi,
+  description: 'NDVI_Vegetation_Health',
+  folder: 'GEE_ESG_Project',
+  scale: 1000,
+  region: region,
+  maxPixels: 1e13
+});
+
+// Export Temperature Map
+Export.image.toDrive({
+  image: temperature,
+  description: 'Temperature_Heat_Stress',
+  folder: 'GEE_ESG_Project',
+  scale: 1000,
+  region: region,
+  maxPixels: 1e13
+});
+
+// Add Firms / Banks as points (example locations)
+var firms = ee.FeatureCollection([
+  ee.Feature(ee.Geometry.Point([67.02, 24.86]), {name: 'Bank / Firm A'}),
+  ee.Feature(ee.Geometry.Point([67.10, 24.88]), {name: 'Bank / Firm B'}),
+  ee.Feature(ee.Geometry.Point([66.95, 24.92]), {name: 'Industrial Firm C'})
+]);
+
+// Display firms on map
+Map.addLayer(firms, {color: 'black'}, 'Firms / Banks');
+
+// Optional: label firms
+Map.addLayer(firms.style({
+  color: 'black',
+  pointSize: 6,
+  fillColor: 'black'
+}), {}, 'Firm Points');
+
