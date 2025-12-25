@@ -13,6 +13,9 @@ The goal is to show how **objective, geospatial climate data** can complement or
 
 ---
 
+## Project Demo Video
+[▶ Watch the project demo video](media/esg_risk_demo.mp4)
+
 ## Why This Matters for ESG & Sustainable Finance
 
 Traditional ESG scores often rely on **self-reported and lagged data**.
